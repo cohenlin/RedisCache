@@ -1,9 +1,12 @@
 package com.cohen.redis;
 
 import com.cohen.redis.annotation.RedisCached;
-import com.cohen.redis.assembly.RedisCache;
 import com.cohen.redis.assembly.RedisCacheHandler;
-import com.cohen.redis.assembly.RedisDao;
+import com.cohen.redis.assembly.cache.RedisCache;
+import com.cohen.redis.assembly.cache.RedisDao;
+import com.cohen.redis.assembly.cache.manager.CacheManager;
+import com.cohen.redis.assembly.cache.manager.FIFOCacheManager;
+import com.cohen.redis.assembly.cache.manager.LRUCacheManager;
 import com.cohen.redis.property.JedisPoolProperty;
 import com.cohen.redis.property.RedisCacheProperty;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
@@ -57,18 +60,46 @@ public class RedisCacheAutoConfiguration {
         return redisDao;
     }
 
+    /**
+     * 缓存过期策略Manager, 如果开启了缓存，即便是没有配置缓存策略，也会创建一个先进先出的manager来处理缓存过期策略
+     */
     @Bean
-    @ConditionalOnMissingBean({RedisCache.class})
-    @ConditionalOnBean({RedisDao.class})
+    @ConditionalOnMissingBean({CacheManager.class})
     @ConditionalOnProperty(name = "redis.cache.enable", havingValue = "true", matchIfMissing = true)// 判断是否配置了开启缓存
-    public RedisCache redisCache(RedisDao redisDao, RedisCacheProperty property) {
-        return new RedisCache(redisDao, property.getInitCacheSize(), property.getSecond());
+    public CacheManager cacheManager(RedisCacheProperty property) {
+        CacheManager cacheManager = null;
+        switch (property.getFailureRule().toUpperCase()) {
+            case "FIFO":// 先进先出
+                cacheManager = new FIFOCacheManager(property.getInitCacheSize());
+                break;
+            case "LRU":// 最近最少使用
+                cacheManager = new LRUCacheManager(property.getInitCacheSize());
+                break;
+            case "LFU":// 最近不经常使用
+                break;
+            default:
+                cacheManager = new FIFOCacheManager(property.getInitCacheSize());
+        }
+        return cacheManager;
     }
 
+    /**
+     * 缓存实现
+     */
+    @Bean
+    @ConditionalOnMissingBean({RedisCache.class})
+    @ConditionalOnBean({RedisDao.class, CacheManager.class})
+    public RedisCache redisCache(RedisDao redisDao, CacheManager cacheManager) {
+        return new RedisCache(redisDao, cacheManager);
+    }
+
+    /**
+     * 缓存处理器
+     */
     @Bean
     @ConditionalOnMissingBean({RedisCacheHandler.class})
     @ConditionalOnBean({RedisCache.class})
-    @ConditionalOnClass({RedisCached.class,Aspect.class})// 判断类路径下是否有Aspect的依赖
+    @ConditionalOnClass({RedisCached.class, Aspect.class})// 判断类路径下是否有Aspect的依赖
     public RedisCacheHandler redisCacheHandler(RedisCache redisCache) {
         return new RedisCacheHandler(redisCache);
     }

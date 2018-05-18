@@ -10,8 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class RedisCacheProperty {
     private int initCacheSize = 1024;// 缓存大小
     private int second = 24 * 60 * 60;// 缓存时间
-    private boolean enable;
-    private String packageName;
+    private boolean enable = false;// 是否开启缓存
+    private String failureRule = "FIFO";// 缓存过期策略，默认先进先出
 
     public int getInitCacheSize() {
         return initCacheSize;
@@ -29,11 +29,19 @@ public class RedisCacheProperty {
         this.second = second;
     }
 
-    public String getPackageName() {
-        return packageName;
+    public boolean isEnable() {
+        return enable;
     }
 
-    public void setPackageName(String packageName) {
-        this.packageName = packageName;
+    public void setEnable(boolean enable) {
+        this.enable = enable;
+    }
+
+    public String getFailureRule() {
+        return failureRule;
+    }
+
+    public void setFailureRule(String failureRule) {
+        this.failureRule = failureRule;
     }
 }

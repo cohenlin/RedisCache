@@ -1,4 +1,4 @@
-package com.cohen.redis.assembly;
+package com.cohen.redis.assembly.cache;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
