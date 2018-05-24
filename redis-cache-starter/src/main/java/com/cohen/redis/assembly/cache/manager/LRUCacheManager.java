@@ -42,6 +42,10 @@ public class LRUCacheManager implements CacheManager {
         return (String) this.cacheMap.get(namespace).put(key, null);
     }
 
+    public void moveKey(String namespace, String key) {
+        this.cacheMap.get(namespace).get(key);// LinkedHashMap如果入参assessOrder设置为true, 则调用get方法时会将get到的元素从链表中移动至末端
+    }
+
     /**
      * 判断namespace是否存在，不存在则创建
      *

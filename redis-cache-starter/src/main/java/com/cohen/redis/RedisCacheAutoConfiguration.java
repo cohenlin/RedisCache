@@ -6,6 +6,7 @@ import com.cohen.redis.assembly.cache.RedisCache;
 import com.cohen.redis.assembly.cache.RedisDao;
 import com.cohen.redis.assembly.cache.manager.CacheManager;
 import com.cohen.redis.assembly.cache.manager.FIFOCacheManager;
+import com.cohen.redis.assembly.cache.manager.LFUCacheManager;
 import com.cohen.redis.assembly.cache.manager.LRUCacheManager;
 import com.cohen.redis.property.JedisPoolProperty;
 import com.cohen.redis.property.RedisCacheProperty;
@@ -34,7 +35,7 @@ public class RedisCacheAutoConfiguration {
      * jedisPool
      */
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean({JedisPool.class})
     public JedisPool jedisPool(JedisPoolProperty property) {
         JedisPool jedisPool = null;
         GenericObjectPoolConfig config = new GenericObjectPoolConfig();
@@ -76,6 +77,7 @@ public class RedisCacheAutoConfiguration {
                 cacheManager = new LRUCacheManager(property.getInitCacheSize());
                 break;
             case "LFU":// 最近不经常使用
+                cacheManager = new LFUCacheManager(property.getInitCacheSize());
                 break;
             default:
                 cacheManager = new FIFOCacheManager(property.getInitCacheSize());

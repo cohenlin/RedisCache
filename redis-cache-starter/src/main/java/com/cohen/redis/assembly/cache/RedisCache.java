@@ -1,6 +1,8 @@
 package com.cohen.redis.assembly.cache;
 
 import com.cohen.redis.assembly.cache.manager.CacheManager;
+import com.cohen.redis.assembly.cache.manager.LFUCacheManager;
+import com.cohen.redis.assembly.cache.manager.LRUCacheManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,7 +32,13 @@ public class RedisCache implements Cache {
      */
     public Object queryFromCache(String namespace, String key) {
         Object result = redisDao.hget(namespace, key);
-        LOG.info("[Redis Cache] : 缓存命中 - namespace: {} - key: {}, - result: {}", namespace, key, result.toString());
+        if (this.cacheManager instanceof LFUCacheManager) {// 如果是LFUCacheManager的实例, 每次从缓存中取需要递增使用次数
+            ((LFUCacheManager) this.cacheManager).increase(namespace, key);
+        }
+        if (this.cacheManager instanceof LRUCacheManager) {// 如果是LRUCacheManager的实例, 每次从缓存中取需要调用map的get方法, 将key从链表中移动至链表尾端
+            ((LRUCacheManager) this.cacheManager).moveKey(namespace, key);
+        }
+        LOG.info("[Redis Cache] : 缓存命中 - namespace: {} - key: {} - result: {}", namespace, key, result.toString());
         return result;
     }
 
@@ -39,11 +47,11 @@ public class RedisCache implements Cache {
      */
     public void updateToCache(String namespace, String key, Object value) {
         String poll = null;
-        if ((poll = cacheManager.cacheKey(namespace, key)) != null) {// 保存key的时候，清掉了一个另key，从redis中删除
+        if ((poll = cacheManager.cacheKey(namespace, key)) != null) {// 保存key的时候, 清掉了一个另key，从redis中删除
             this.removeCacheKey(namespace, poll);// 删除被清除的key对应的redis缓存数据
         }
         redisDao.hset(namespace, key, value);// 将数据缓存入redis
-        LOG.info("[Redis Cache] : 缓存未命中, 数据已缓存入redis - namespace: {} - key: {}, - result: {}", namespace, key, value.toString());
+        LOG.info("[Redis Cache] : 缓存未命中, 数据已缓存入redis - namespace: {} - key: {} - result: {}", namespace, key, value.toString());
     }
 
     /**
