@@ -56,6 +56,15 @@
             <version>2.9.0</version>
             <optional>true</optional>
         </dependency>
+
+        <!-- junit测试jar包 -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
 </project>

@@ -58,7 +58,7 @@ public class RedisCache implements Cache {
      * 删除redis中缓存key
      */
     private void removeCacheKey(String namespace, String key) {
-        LOG.info("[Redis Cache] : 已清除缓存数据: namespace: {} - key: {}", namespace, key);
+        LOG.info("[Redis Cache] : 已清除 \"{}\" 中缓存 \"{}\" 数据", namespace, key);
         redisDao.hdel(namespace, key);
     }
 

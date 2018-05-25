@@ -1,5 +1,9 @@
 package com.cohen.redis.assembly.cache.manager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -10,7 +14,10 @@ import java.util.Map;
  * @date 2018/5/1718:00
  */
 public class LRUCacheManager implements CacheManager {
-
+    /**
+     * 日志工具
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(LRUCacheManager.class);
     private Map<String, Map<String, Object>> cacheMap = null;
     private int initCacheSize;// 缓存大小，默认为1024
 
@@ -18,17 +25,22 @@ public class LRUCacheManager implements CacheManager {
     }
 
     public LRUCacheManager(int initCacheSize) {
+        cacheMap = new HashMap<>();
         this.initCacheSize = initCacheSize;
     }
 
     @Override
     public boolean containsNamespaceInCacheMap(String namespace) {
-        return this.cacheMap.containsKey(namespace);
+        boolean b = this.cacheMap.containsKey(namespace);
+        LOG.debug("[Redis Cache] [LRUCacheManager] : 判断缓存中是否存在 namespace: {}, - result: {}", namespace, b);
+        return b;
     }
 
     @Override
     public boolean containsCacheKeyInCacheMap(String namespace, String key) {
-        return ((cacheMap.get(namespace) != null) && (cacheMap.get(namespace).containsKey(key)));
+        boolean b = ((cacheMap.get(namespace) != null) && (cacheMap.get(namespace).containsKey(key)));
+        LOG.debug("[Redis Cache] [LRUCacheManager] : 判断缓存中是否存在 key: {}, - namespace: {} - key: {} - result: {}", key, namespace, key, b);
+        return b;
     }
 
     /**
@@ -39,7 +51,9 @@ public class LRUCacheManager implements CacheManager {
     @Override
     public String cacheKey(String namespace, String key) {
         this.validNamespace(namespace);// 判断namespace是否存在，不存在创建一个LinkedHashMap放到CacheMap中
-        return (String) this.cacheMap.get(namespace).put(key, null);
+        String result = (String) this.cacheMap.get(namespace).put(key, null);
+        LOG.debug("[Redis Cache] [LRUCacheManager] : 保存缓存key: {} - namespace: {} - key: {} - 是否需要删除过期key: {} - 过期key: {}", key, namespace, key, result != null, result);
+        return result;
     }
 
     public void moveKey(String namespace, String key) {
@@ -66,12 +80,12 @@ public class LRUCacheManager implements CacheManager {
                  */
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, Object> eldest) {
-                    if (this.size() <= initCacheSize + 1) {// 如果插入后当前map的大小比initCacheSize大，则返回true删除最老元素
-                        this.eldest = null;// 不需要删除时，返回null
-                        return false;
+                    if (this.size() == initCacheSize + 1) {// 如果插入后当前map的大小比initCacheSize大，则返回true删除最老元素
+                        this.eldest = eldest.getKey();// 不需要删除时，返回null
+                        return true;
                     }
-                    this.eldest = eldest;// 需要删除时，赋值
-                    return true;
+                    this.eldest = null;// 需要删除时，赋值
+                    return false;
                 }
 
                 /**
@@ -83,6 +97,7 @@ public class LRUCacheManager implements CacheManager {
                     return this.eldest;// 如果本次插入需要删除元素，这里会返回最老元素值，如果不需要删除，会返回null
                 }
             });
+            LOG.debug("[Redis Cache] [LRUCacheManager] : Namespace \"{}\" 为空, 创建一个LinkedHashMap, 大小为 {}", namespace, this.initCacheSize);
         }
     }
 }

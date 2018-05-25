@@ -1,5 +1,8 @@
 package com.cohen.redis.assembly.cache.manager;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.*;
 
 /**
@@ -9,6 +12,10 @@ import java.util.*;
  * @date 2018/5/189:02
  */
 public class LFUCacheManager implements CacheManager {
+    /**
+     * 日志工具
+     */
+    private static final Logger LOG = LoggerFactory.getLogger(LFUCacheManager.class);
     private Map<String, Map<String, Object>> cacheMap = null;// 缓存key和使用次数
     private int initCacheSize = 1024;
 
@@ -22,18 +29,24 @@ public class LFUCacheManager implements CacheManager {
 
     @Override
     public boolean containsNamespaceInCacheMap(String namespace) {
-        return this.cacheMap.containsKey(namespace);
+        boolean b = this.cacheMap.containsKey(namespace);
+        LOG.debug("[Redis Cache] [LFUCacheManager] : 判断缓存中是否存在 namespace: {}, - result: {}", namespace, b);
+        return b;
     }
 
     @Override
     public boolean containsCacheKeyInCacheMap(String namespace, String key) {
-        return this.cacheMap.get(namespace) != null && this.cacheMap.get(namespace).containsKey(key);
+        boolean b = (this.cacheMap.get(namespace) != null && this.cacheMap.get(namespace).containsKey(key));
+        LOG.debug("[Redis Cache] [LFUCacheManager] : 判断缓存中是否存在 key: {}, - namespace: {} - key: {} - result: {}", key, namespace, key, b);
+        return b;
     }
 
     @Override
     public String cacheKey(String namespace, String key) {
         this.validNamespace(namespace);
-        return null;
+        String result = (String)this.cacheMap.get(namespace).put(key, 1);
+        LOG.debug("[Redis Cache] [LFUCacheManager] : 保存缓存key: {} - namespace: {} - key: {} - 是否需要删除过期key: {} - 过期key: {}", key, namespace, key, result != null, result);
+        return result;
     }
 
     public void increase(String namespace, String key) {
@@ -67,10 +80,13 @@ public class LFUCacheManager implements CacheManager {
 
                 @Override
                 public Object get(Object key) {
-                    super.put((String)key, (Integer) this.get(key) + 1);// 递增次数
+                    Integer count = (Integer)super.get(key) + 1;
+                    this.remove(key);
+                    super.put((String)key, count);// 递增次数
                     return super.get(key);
                 }
             });
+            LOG.debug("[Redis Cache] [LFUCacheManager] : Namespace \"{}\" 为空, 创建一个HashMap, 大小为 {}", namespace, this.initCacheSize);
         }
     }
 }
